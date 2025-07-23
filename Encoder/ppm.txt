@@ -1,0 +1,53 @@
+#define ENC_A 34  // Encoder canal A
+
+volatile long encoderCount = 0;
+unsigned long lastSecond = 0;
+unsigned long startTime = 0;
+
+void IRAM_ATTR encoderISR() {
+  encoderCount++;
+}
+
+void setup() {
+  Serial.begin(9600);
+  delay(1000);  // Espera a que abra bien el monitor serial
+
+  pinMode(ENC_A, INPUT);
+  attachInterrupt(digitalPinToInterrupt(ENC_A), encoderISR, RISING);
+
+  Serial.println("Iniciando lectura de pulsos por minuto (PPM)...");
+  delay(3000);  // Cuenta regresiva
+
+  encoderCount = 0;
+  startTime = millis();
+  lastSecond = millis();
+
+  Serial.println("¡Gira el motor manualmente por 60 segundos!");
+}
+
+void loop() {
+  unsigned long currentTime = millis();
+  unsigned long elapsedTime = currentTime - startTime;
+
+  if (elapsedTime <= 60000) {
+    if (currentTime - lastSecond >= 1000) {
+      long countSnapshot = encoderCount;
+      int secondsLeft = 60 - (elapsedTime / 1000);
+
+      Serial.print("Tiempo restante: ");
+      Serial.print(secondsLeft);
+      Serial.print(" s | Pulsos acumulados: ");
+      Serial.println(countSnapshot);
+
+      lastSecond = currentTime;
+    }
+  } else {
+    detachInterrupt(digitalPinToInterrupt(ENC_A));
+
+    Serial.println("Tiempo finalizado.");
+    Serial.print("Pulsos por minuto (PPM): ");
+    Serial.println(encoderCount);
+
+    while (true);  // Detener el loop
+  }
+}
