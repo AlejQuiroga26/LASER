@@ -1,0 +1,81 @@
+// Pines del motor
+#define ENA 5      // PWM
+#define IN1 18
+#define IN2 19
+
+// Pines del encoder
+#define ENC_A 34
+
+// Variables del encoder
+volatile long encoderCount = 0;
+unsigned long lastMillis = 0;
+
+// Configuración del PWM
+#define PWM_CHANNEL 0
+#define PWM_FREQ 1000
+#define PWM_RESOLUTION 8  // 8 bits: 0–255
+
+// Parámetros del encoder
+const int pulsesPerRevolution = 30;  // Ajusta según tu motor
+const int intervaloMedicion = 500;   // Cada cuánto medir RPM (ms)
+
+// RPM objetivo
+const float rpmObjetivo = 50.0;  // Puedes cambiar este valor
+
+// Controlador
+float Kp = 1.5;  // Ganancia proporcional
+int pwmSalida = 0;
+
+void IRAM_ATTR encoderISR() {
+  encoderCount++;
+}
+
+void setup() {
+  Serial.begin(115200);
+
+  // Motor
+  pinMode(IN1, OUTPUT);
+  pinMode(IN2, OUTPUT);
+  digitalWrite(IN1, HIGH);  // Dirección fija
+  digitalWrite(IN2, LOW);
+
+  // PWM
+  ledcSetup(PWM_CHANNEL, PWM_FREQ, PWM_RESOLUTION);
+  ledcAttachPin(ENA, PWM_CHANNEL);
+
+  // Encoder
+  pinMode(ENC_A, INPUT);
+  attachInterrupt(digitalPinToInterrupt(ENC_A), encoderISR, RISING);
+
+  lastMillis = millis();
+  Serial.println("🛠 Control automático de RPM iniciado.");
+}
+
+void loop() {
+  unsigned long now = millis();
+
+  if (now - lastMillis >= intervaloMedicion) {
+    long pulsos = encoderCount;
+    encoderCount = 0;
+
+    float vueltas = (float)pulsos / pulsesPerRevolution;
+    float rpm = vueltas * (60000.0 / intervaloMedicion);  // RPM en intervalo
+
+    float error = rpmObjetivo - rpm;
+    pwmSalida += Kp * error;
+
+    // Limita PWM entre 0 y 255
+    pwmSalida = constrain(pwmSalida, 0, 255);
+    ledcWrite(PWM_CHANNEL, pwmSalida);
+
+    // Mostrar datos
+    Serial.print("RPM actual: ");
+    Serial.print(rpm);
+    Serial.print(" | PWM: ");
+    Serial.print(pwmSalida);
+    Serial.print(" | Error: ");
+    Serial.println(error);
+
+    lastMillis = now;
+  }
+}
