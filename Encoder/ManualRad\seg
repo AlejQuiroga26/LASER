@@ -1,0 +1,54 @@
+#define ENC_A 34  // Canal A (C1 - verde)
+#define ENC_B 35  // Canal B (C2 - amarillo)
+
+volatile long encoderCount = 0;
+
+// Parámetros del encoder
+const int pulsesPerRevolution = 30;
+
+// Intervalo de lectura en milisegundos
+const unsigned long intervalo = 100;
+
+unsigned long ultimaMedida = 0;
+
+void IRAM_ATTR encoderISR() {
+  int b = digitalRead(ENC_B);
+  if (b == LOW)
+    encoderCount++;
+  else
+    encoderCount--;
+}
+
+void setup() {
+  Serial.begin(115200);
+
+  pinMode(ENC_A, INPUT);
+  pinMode(ENC_B, INPUT);
+  attachInterrupt(digitalPinToInterrupt(ENC_A), encoderISR, RISING);
+
+  Serial.println("🔄 Velocidad angular en radianes/segundo (rad/s)");
+}
+
+void loop() {
+  unsigned long ahora = millis();
+
+  if (ahora - ultimaMedida >= intervalo) {
+    noInterrupts();  // Proteger lectura
+    long pulsos = encoderCount;
+    encoderCount = 0;
+    interrupts();
+
+    // Δt en segundos
+    float dt = intervalo / 1000.0;
+
+    // Velocidad angular en rad/s
+    float radianes = (float)pulsos * (2 * PI) / pulsesPerRevolution;
+    float velocidadAngular = radianes / dt;
+
+    Serial.print("Velocidad angular: ");
+    Serial.print(velocidadAngular);
+    Serial.println(" rad/s");
+
+    ultimaMedida = ahora;
+  }
+}
