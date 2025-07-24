@@ -1,0 +1,53 @@
+#define ENC_A 34  // Encoder canal A (verde)
+
+volatile long encoderCount = 0;
+
+// Ajusta según tu encoder
+const int pulsesPerRevolution = 30;  // CAMBIA este valor si ya sabes el real
+
+// Tiempo de medición en segundos
+const int tiempoMedicion = 10;
+
+void IRAM_ATTR encoderISR() {
+  encoderCount++;
+}
+
+void setup() {
+  Serial.begin(115200);
+  delay(1000); // Espera a que abra bien el monitor serial
+
+  pinMode(ENC_A, INPUT);
+  attachInterrupt(digitalPinToInterrupt(ENC_A), encoderISR, RISING);
+
+  Serial.println("🟢 Medición de RPM manual");
+  Serial.println("👉 Gira el eje del motor durante 10 segundos.");
+  delay(3000);
+
+  encoderCount = 0; // Reinicia el conteo
+
+  unsigned long startTime = millis();
+  unsigned long endTime = startTime + (tiempoMedicion * 1000);
+
+  while (millis() < endTime) {
+    // Esperando durante los 10 segundos
+  }
+
+  detachInterrupt(digitalPinToInterrupt(ENC_A)); // Detenemos la interrupción
+
+  // Cálculo de RPM
+  long pulsos = encoderCount;
+  float vueltas = (float)pulsos / pulsesPerRevolution;
+  float rpm = vueltas * (60.0 / tiempoMedicion);
+
+  Serial.println("✅ Medición completada.");
+  Serial.print("🔄 Pulsos detectados: ");
+  Serial.println(pulsos);
+  Serial.print("🔁 Vueltas detectadas: ");
+  Serial.println(vueltas);
+  Serial.print("📈 RPM estimadas: ");
+  Serial.println(rpm);
+}
+
+void loop() {
+  // No hace nada después
+}
