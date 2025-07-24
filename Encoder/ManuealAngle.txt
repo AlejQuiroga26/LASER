@@ -1,0 +1,37 @@
+#define ENC_A 34  // Canal A (C1 - verde)
+#define ENC_B 35  // Canal B (C2 - amarillo) - para dirección
+
+volatile long encoderPulsos = 0;
+
+// Ajusta esto a los pulsos por vuelta de tu encoder
+const int pulsesPerRevolution = 30;
+
+void IRAM_ATTR encoderISR() {
+  int b = digitalRead(ENC_B);  // Leer canal B para detectar dirección
+
+  if (b == LOW) encoderPulsos++;   // Giro en un sentido
+  else encoderPulsos--;            // Giro en el otro
+}
+
+void setup() {
+  Serial.begin(115200);
+
+  pinMode(ENC_A, INPUT);
+  pinMode(ENC_B, INPUT);
+  attachInterrupt(digitalPinToInterrupt(ENC_A), encoderISR, RISING);
+
+  Serial.println("🧭 Comienza a girar el motor manualmente...");
+}
+
+void loop() {
+  long pulsos = encoderPulsos;
+  float angulo = (float)(pulsos * 360.0) / pulsesPerRevolution;
+
+  Serial.print("Pulsos: ");
+  Serial.print(pulsos);
+  Serial.print(" | Ángulo: ");
+  Serial.print(angulo);
+  Serial.println("°");
+
+  delay(500);  // Actualiza cada medio segundo
+}
